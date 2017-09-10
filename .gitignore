@@ -1,0 +1,14 @@
+## IDE
+.idea/
+
+## Libraries
+node_modules/
+
+## Local
+*~
+.DS_Store
+
+## Temporary files
+*.log
+public/
+
