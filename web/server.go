@@ -8,6 +8,8 @@ import (
     "strconv"
     "encoding/json"
     "encoding/base64"
+    "fmt"
+    "log"
 )
 
 type hashStats struct {
@@ -72,7 +74,7 @@ func (s *Server) Start() {
             w.WriteHeader(http.StatusAccepted)
             w.Write([]byte(strconv.Itoa(s.jobCounter)))
 
-            s.hashTimes[s.jobCounter] += time.Since(startTime).Seconds()
+            s.hashTimes[s.jobCounter] += time.Since(startTime).Seconds() * 1000
 
         default:
             w.WriteHeader(http.StatusNotFound)
@@ -101,11 +103,16 @@ func (s *Server) Start() {
     s.httpServer.ListenAndServe()
 }
 
-func (s *Server) Stop() {
-    ctx, cancel := context.WithTimeout(context.Background(), 10 * time.Second)
-    defer cancel()
+func (s *Server) Stop(ctx context.Context) {
+    if err := s.httpServer.Shutdown(ctx); err != nil {
+        log.Println(err)
+    }
 
-    s.httpServer.Shutdown(ctx)
+    // Wait for outstanding requests to finish.  Had to add this separate timer
+    // because we have potential background jobs that could still be running.
+    // These background jobs are NOT tied to any open requests thus the server
+    // has no knowledge of them and will not wait for them during Shutdown().
+    time.Sleep(10 * time.Second)
 }
 
 /************
@@ -119,7 +126,7 @@ func (s *Server) getLatestStats() hashStats {
     stats := hashStats{
         Total:   0,
         Average: 0.0,
-        Unit: "seconds",
+        Unit: "milliseconds",
     }
 
     for _, v := range s.hashTimes {
@@ -136,11 +143,13 @@ func (s *Server) getLatestStats() hashStats {
 }
 
 func (s *Server) storePassword(jobId int, password string) {
+    fmt.Printf("start processing job %d...\n", jobId)
     time.Sleep(5 * time.Second)
 
     startTime := time.Now()
-    encoded := base64.StdEncoding.EncodeToString([]byte(strings.TrimSpace(password)))
+    encoded := base64.StdEncoding.EncodeToString([]byte(password))
     s.passwordStorage[jobId] = encoded
 
-    s.hashTimes[jobId] += time.Since(startTime).Seconds()
+    s.hashTimes[jobId] += time.Since(startTime).Seconds() * 1000
+    fmt.Printf("finished processing job %d\n", jobId)
 }

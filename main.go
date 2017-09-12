@@ -5,6 +5,8 @@ import (
     "os"
     "os/signal"
     "syscall"
+    "time"
+    "context"
     "fmt"
 )
 
@@ -18,9 +20,12 @@ func main() {
         server.Start()
     }()
 
+    // Wait for kill signal
     <-stop
-    server.Stop()
+    fmt.Println("Shutting down...")
 
-    fmt.Println("server has gracefully shutdown")
-    fmt.Println()
+    ctx, cancel := context.WithTimeout(context.Background(), 10 * time.Second)
+    defer cancel()
+
+    server.Stop(ctx)
 }
