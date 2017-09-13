@@ -10,6 +10,7 @@ import (
     "encoding/base64"
     "fmt"
     "log"
+    "crypto/sha512"
 )
 
 type hashStats struct {
@@ -48,7 +49,9 @@ func (s *Server) Start() {
             }
 
             w.WriteHeader(http.StatusOK)
-            w.Write([]byte(s.passwordStorage[jobId]))
+            base64Encoded := base64.StdEncoding.EncodeToString([]byte(s.passwordStorage[jobId]))
+
+            w.Write([]byte(base64Encoded))
 
         default:
             w.WriteHeader(http.StatusNotFound)
@@ -146,9 +149,10 @@ func (s *Server) storePassword(jobId int, password string) {
     fmt.Printf("start processing job %d...\n", jobId)
     time.Sleep(5 * time.Second)
 
+    // Include only the processing time excluding the 5 second wait period.
     startTime := time.Now()
-    encoded := base64.StdEncoding.EncodeToString([]byte(password))
-    s.passwordStorage[jobId] = encoded
+    sha512Encoded := sha512.Sum512([]byte(password))
+    s.passwordStorage[jobId] = string(sha512Encoded[:])
 
     s.hashTimes[jobId] += time.Since(startTime).Seconds() * 1000
     fmt.Printf("finished processing job %d\n", jobId)
