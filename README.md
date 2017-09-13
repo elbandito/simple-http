@@ -21,7 +21,7 @@ To experiment with a simple Go http server that provides some basic handlers and
 
 ### Setup ###
 
-No special setup required.  To run simply type `go run simple_http.go`
+No special setup required.  To run simply type `go run main.go`
 
 
 ### Notes ###
