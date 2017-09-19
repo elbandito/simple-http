@@ -11,6 +11,7 @@ import (
     "fmt"
     "log"
     "crypto/sha512"
+    "sync"
 )
 
 type hashStats struct {
@@ -21,6 +22,7 @@ type hashStats struct {
 
 type Server struct {
     httpServer *http.Server
+    waitGroup sync.WaitGroup
     passwordStorage map[int]string
     hashTimes map[int]float64
     jobCounter int
@@ -48,8 +50,14 @@ func (s *Server) Start() {
                 return
             }
 
+            sha1Password := s.passwordStorage[jobId]
+            if sha1Password == "" {
+                w.WriteHeader(http.StatusNotFound)
+                return
+            }
+
             w.WriteHeader(http.StatusOK)
-            base64Encoded := base64.StdEncoding.EncodeToString([]byte(s.passwordStorage[jobId]))
+            base64Encoded := base64.StdEncoding.EncodeToString([]byte(sha1Password))
 
             w.Write([]byte(base64Encoded))
 
@@ -111,11 +119,7 @@ func (s *Server) Stop(ctx context.Context) {
         log.Println(err)
     }
 
-    // Wait for outstanding requests to finish.  Had to add this separate timer
-    // because we have potential background jobs that could still be running.
-    // These background jobs are NOT tied to any open requests thus the server
-    // has no knowledge of them and will not wait for them during Shutdown().
-    time.Sleep(10 * time.Second)
+    s.waitGroup.Wait()
 }
 
 /************
@@ -146,6 +150,9 @@ func (s *Server) getLatestStats() hashStats {
 }
 
 func (s *Server) storePassword(jobId int, password string) {
+    s.waitGroup.Add(1)
+    defer s.waitGroup.Done()
+
     fmt.Printf("start processing job %d...\n", jobId)
     time.Sleep(5 * time.Second)
 
