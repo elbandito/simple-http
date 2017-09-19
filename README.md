@@ -43,8 +43,3 @@ For example:
 * Statistical calculations for the `/stats` endpoint only includes `/hash/` calls that were successful.
 * One possible optimisation would be to not re-generate new SHA512 for previous passwords that are the same.  Instead, 
 just use pointers and create a one-to-many relationship between `jobIs` and SHA512 passwords.
-* Currently, I'm doing a simple hard wait of 5 seconds for all the background jobs to complete.  This should be enough
-time given that the background `func` takes a hardcoded time of 5 second.  That being said, this is still not a very
-robust approach.  A couple of approaches would be to:
-    1. Use a `chan` to indicate any outstanding background jobs.  Once the `chan` is empty then exit.
-    2. Use a thread pool, and then wait for outstanding threads to finish before exiting.
